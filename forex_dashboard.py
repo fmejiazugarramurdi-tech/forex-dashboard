@@ -22,7 +22,8 @@ import re
 #  CONFIGURACIÓN — EDITA SOLO ESTA SECCIÓN
 # ─────────────────────────────────────────────
 GMAIL_ADDRESS   = "fmejiazugarramurdi@gmail.com"   # Tu Gmail
-GMAIL_APP_PASSWORD = "nmkkpstmqwbgdjfm"  # Ver CONFIGURACION.txt
+import os
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")  # Ver CONFIGURACION.txt
 DESTINATARIO    = "fmejiazugarramurdi@gmail.com"
 # ─────────────────────────────────────────────
 
