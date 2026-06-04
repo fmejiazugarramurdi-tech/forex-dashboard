@@ -8,12 +8,14 @@ on:
 jobs:
   send-dashboard:
     runs-on: ubuntu-latest
-    steps:
+   steps:
       - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: Install dependencies
+        run: pip install yfinance pandas numpy
       - name: Run dashboard
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
