@@ -22,8 +22,7 @@ import re
 #  CONFIGURACIÓN — EDITA SOLO ESTA SECCIÓN
 # ─────────────────────────────────────────────
 GMAIL_ADDRESS   = "fmejiazugarramurdi@gmail.com"   # Tu Gmail
-import os
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")  # Ver CONFIGURACION.txt
+GMAIL_APP_PASSWORD = "PEGA_AQUI_TU_CONTRASEÑA_DE_APP"  # Ver CONFIGURACION.txt
 DESTINATARIO    = "fmejiazugarramurdi@gmail.com"
 # ─────────────────────────────────────────────
 
@@ -38,36 +37,66 @@ NIVELES_TECNICOS = {
         "resistencia":["1.1683", "1.1750", "1.1800"],
         "tendencia":  "Lateral-bajista en corto plazo. Canal alcista desde marzo intacto.",
         "sesgo":      "⚠️ NEUTRO — esperar confirmación tras NFP",
+        "timeframes": {
+            "30min": "⏸️ No operar — esperar NFP",
+            "1hr":   "⏸️ No operar — esperar NFP",
+            "4hr":   "⏸️ No operar — esperar NFP",
+        },
     },
     "GBP/USD": {
         "soporte":    ["1.3400", "1.3300"],
         "resistencia":["1.3500", "1.3600"],
         "tendencia":  "Alcista estructural. Sesgo comprador en pullbacks.",
         "sesgo":      "🟢 ALCISTA — buscar largos en soporte",
+        "timeframes": {
+            "30min": "🟢 LARGO en 1.3400 — entrada rápida, SL 1.3370",
+            "1hr":   "🟢 LARGO en pullback a 1.3400 — SL 1.3360, TP 1.3500",
+            "4hr":   "🟢 LARGO en zona 1.3380-1.3400 — SL 1.3300, TP 1.3600",
+        },
     },
     "USD/JPY": {
         "soporte":    ["154.00", "152.50"],
         "resistencia":["156.00", "157.50"],
         "tendencia":  "Presión alcista por yields. Vigilar intervención BoJ.",
         "sesgo":      "🟡 ALCISTA CAUTELOSO — atento a yield 10Y USA",
+        "timeframes": {
+            "30min": "🟡 LARGO solo si supera 155.50 con volumen",
+            "1hr":   "🟡 LARGO en soporte 154.00 — SL 153.50, TP 156.00",
+            "4hr":   "🟡 LARGO estructural — SL 152.50, TP 157.50",
+        },
     },
     "USD/CHF": {
         "soporte":    ["0.8900", "0.8820"],
         "resistencia":["0.9000", "0.9080"],
         "tendencia":  "Bajista en USD. CHF como refugio activo.",
         "sesgo":      "🔴 BAJISTA USD — favorecer cortos en rebotes",
+        "timeframes": {
+            "30min": "🔴 CORTO en rebote a 0.8970-0.9000 — SL 0.9020",
+            "1hr":   "🔴 CORTO en resistencia 0.9000 — SL 0.9040, TP 0.8900",
+            "4hr":   "🔴 CORTO en zona 0.9000-0.9080 — SL 0.9100, TP 0.8820",
+        },
     },
     "EUR/GBP": {
         "soporte":    ["0.8450", "0.8400"],
         "resistencia":["0.8520", "0.8580"],
         "tendencia":  "Rango estrecho. GBP relativamente fuerte.",
         "sesgo":      "⚠️ NEUTRO — sin tendencia clara",
+        "timeframes": {
+            "30min": "⏸️ No operar — rango sin dirección clara",
+            "1hr":   "⏸️ Esperar ruptura de 0.8520 o caída a 0.8450",
+            "4hr":   "⏸️ Rango 0.8400-0.8580 — operar en extremos",
+        },
     },
     "EUR/JPY": {
         "soporte":    ["163.00", "161.50"],
         "resistencia":["165.50", "167.00"],
         "tendencia":  "Alcista por carry trade. Sensible a riesgo global.",
         "sesgo":      "🟢 ALCISTA — mantener largos con SL ajustado",
+        "timeframes": {
+            "30min": "🟢 LARGO en retroceso a 163.50 — SL 163.00",
+            "1hr":   "🟢 LARGO en soporte 163.00 — SL 162.50, TP 165.50",
+            "4hr":   "🟢 LARGO estructural — SL 161.50, TP 167.00",
+        },
     },
 }
 
@@ -157,6 +186,7 @@ def construir_html():
     for par, datos in NIVELES_TECNICOS.items():
         soportes    = " | ".join(datos["soporte"])
         resistencias= " | ".join(datos["resistencia"])
+        tf = datos["timeframes"]
         filas_pares += f"""
         <tr>
           <td style="font-weight:bold;padding:8px;border-bottom:1px solid #333;">{par}</td>
@@ -164,6 +194,11 @@ def construir_html():
           <td style="padding:8px;border-bottom:1px solid #333;color:#ff6666;">{resistencias}</td>
           <td style="padding:8px;border-bottom:1px solid #333;font-size:12px;">{datos['tendencia']}</td>
           <td style="padding:8px;border-bottom:1px solid #333;font-weight:bold;">{datos['sesgo']}</td>
+          <td style="padding:8px;border-bottom:1px solid #333;font-size:11px;">
+            <span style="color:#aaa;">30m:</span> {tf['30min']}<br>
+            <span style="color:#aaa;">1hr:</span> {tf['1hr']}<br>
+            <span style="color:#aaa;">4hr:</span> {tf['4hr']}
+          </td>
         </tr>"""
 
     # Tabla de eventos de hoy
@@ -272,6 +307,7 @@ def construir_html():
           <th style="padding:8px;text-align:left;">🔴 Resistencia</th>
           <th style="padding:8px;text-align:left;">Tendencia</th>
           <th style="padding:8px;text-align:left;">Sesgo</th>
+          <th style="padding:8px;text-align:left;">⏱️ Timeframe</th>
         </tr>
         {filas_pares}
       </table>
