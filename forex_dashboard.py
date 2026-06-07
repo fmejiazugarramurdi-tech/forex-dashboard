@@ -163,21 +163,35 @@ def nivel_alerta():
 
 def obtener_noticias():
     noticias = []
+    fuentes = [
+        ("https://feeds.finance.yahoo.com/rss/2.0/headline?s=EURUSD=X&region=US&lang=en-US", "Yahoo Finance"),
+        ("https://www.forexlive.com/feed/news", "ForexLive"),
+    ]
     try:
-        url = "https://feeds.finance.yahoo.com/rss/2.0/headline?s=EURUSD=X&region=US&lang=en-US"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         import ssl as _ssl
-        with urllib.request.urlopen(req, timeout=8, context=_ssl.create_default_context()) as r:
-            contenido = r.read().decode("utf-8", errors="ignore")
-        titulos = re.findall(r"<title><!\[CDATA\[(.*?)\]\]></title>|<title>(.*?)</title>", contenido)
-        for t in titulos[1:5]:
-            titulo = (t[0] or t[1]).strip()
-            if titulo and len(titulo) > 15:
-                noticias.append(f"• {titulo}")
+        for url, fuente in fuentes:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=8, context=_ssl.create_default_context()) as r:
+                contenido = r.read().decode("utf-8", errors="ignore")
+            items = re.findall(r"<item>(.*?)</item>", contenido, re.DOTALL)
+            for item in items[:4]:
+                titulo_m = re.search(r"<title><!\[CDATA\[(.*?)\]\]></title>|<title>(.*?)</title>", item)
+                link_m   = re.search(r"<link>(.*?)</link>|<guid[^>]*>(https?://.*?)</guid>", item)
+                if titulo_m:
+                    titulo = (titulo_m.group(1) or titulo_m.group(2) or "").strip()
+                    link   = (link_m.group(1) or link_m.group(2) or "").strip() if link_m else ""
+                    if titulo and len(titulo) > 15:
+                        noticias.append({"titulo": titulo, "link": link, "fuente": fuente})
+            if len(noticias) >= 5:
+                break
     except:
         pass
     if not noticias:
-        noticias = ["• Revisa manualmente: fxstreet.com | forexlive.com | investing.com"]
+        noticias = [
+            {"titulo": "FXStreet — Noticias Forex en vivo", "link": "https://www.fxstreet.com", "fuente": "FXStreet"},
+            {"titulo": "ForexLive — Análisis y noticias", "link": "https://www.forexlive.com", "fuente": "ForexLive"},
+            {"titulo": "Investing.com — Calendario económico", "link": "https://www.investing.com/economic-calendar/", "fuente": "Investing"},
+        ]
     return noticias
 
 
@@ -230,7 +244,14 @@ def construir_html(resultados):
     else:
         tabla_hoy = "<p style='color:#aaa;'>Sin eventos de alto impacto hoy ✅</p>"
 
-    noticias_html = "".join(f"<p style='margin:4px 0;font-size:13px;color:#ccc;'>{n}</p>" for n in noticias)
+    noticias_html = "".join(
+        f"<p style='margin:6px 0;font-size:13px;'>"
+        f"• <a href='{n[\"link\"]}' style='color:#7ecfff;text-decoration:none;' target='_blank'>{n['titulo']}</a>"
+        f" <span style='color:#555;font-size:11px;'>({n['fuente']})</span></p>"
+        if n.get("link") else
+        f"<p style='margin:6px 0;font-size:13px;color:#ccc;'>• {n['titulo']}</p>"
+        for n in noticias
+    )
 
     filas_semana = "".join(f"""
     <tr style="background:{'#2a0000' if 'MÁXIMO' in e['impacto'] else '#1a1a1a'};">
