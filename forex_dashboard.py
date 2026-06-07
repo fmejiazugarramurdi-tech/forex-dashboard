@@ -36,20 +36,18 @@ SOPORTES_RESISTENCIAS = {
 }
 
 EVENTOS_SEMANA = [
-    {"dia": "Lunes 2 jun",    "hora": "15:45", "evento": "ISM Manufacturing PMI (EE.UU.)",   "impacto": "🔴 ALTO",     "par": "USD todos"},
-    {"dia": "Martes 3 jun",   "hora": "15:45", "evento": "ISM Services PMI (EE.UU.)",        "impacto": "🔴 ALTO",     "par": "USD todos"},
-    {"dia": "Miércoles 4 jun","hora": "TBD",   "evento": "Hablan miembros Fed",              "impacto": "🟡 MEDIO",    "par": "USD todos"},
-    {"dia": "Jueves 5 jun",   "hora": "09:00", "evento": "PMI Servicios Eurozona",           "impacto": "🟡 MEDIO",    "par": "EUR/USD"},
-    {"dia": "Jueves 5 jun",   "hora": "14:30", "evento": "Jobless Claims EE.UU.",            "impacto": "🟡 MEDIO",    "par": "USD todos"},
-    {"dia": "Viernes 6 jun",  "hora": "14:30", "evento": "⚡ NFP — Nóminas No Agrícolas",  "impacto": "🔴🔴 MÁXIMO", "par": "TODOS"},
-    {"dia": "Viernes 6 jun",  "hora": "14:30", "evento": "Tasa de desempleo EE.UU.",        "impacto": "🔴 ALTO",     "par": "USD todos"},
-    {"dia": "Viernes 6 jun",  "hora": "11:00", "evento": "CPI Flash Eurozona",              "impacto": "🔴 ALTO",     "par": "EUR/USD"},
+    {"dia": "Lunes 9 jun",    "hora": "TBD",   "evento": "Discursos Fed",                    "impacto": "🟡 MEDIO",    "par": "USD todos"},
+    {"dia": "Martes 10 jun",  "hora": "14:30", "evento": "CPI EE.UU. (mayo)",               "impacto": "🔴 ALTO",     "par": "USD todos"},
+    {"dia": "Miércoles 11 jun","hora": "TBD",  "evento": "BCE — Decisión de tasas",         "impacto": "🔴🔴 MÁXIMO", "par": "EUR todos"},
+    {"dia": "Jueves 12 jun",  "hora": "TBD",   "evento": "PPI EE.UU.",                      "impacto": "🟡 MEDIO",    "par": "USD todos"},
+    {"dia": "Viernes 13 jun", "hora": "TBD",   "evento": "Confianza del consumidor (Univ. Michigan)", "impacto": "🟡 MEDIO", "par": "USD todos"},
 ]
 
 CONTEXTO_MACRO = """• 💵 DXY (~99): Presión bajista estructural. Fed en pausa. Nuevo Chair Warsh: dovish = USD negativo.
-• 🏦 FED: Tasa 3.50%-3.75%. Próximo FOMC 16-17 junio — primer dot plot bajo Warsh.
-• 🏦 BCE: Preparando posible subida de tasas en junio = soporte para EUR.
-• ⚡ RIESGO: Tensiones EE.UU.-Irán. Petróleo elevado = presión inflacionaria global."""
+- 🏦 FED: Tasa 3.50%-3.75%. Próximo FOMC 16-17 junio — primer dot plot bajo Warsh.
+- 🏦 BCE: Subida de tasas esperada el 11 junio = soporte para EUR.
+- 📊 NFP mayo: 172,000 empleos — USD fuerte post dato.
+- ⚡ RIESGO: Tensiones EE.UU.-Irán. Petróleo elevado = presión inflacionaria global."""
 
 
 def calcular_indicadores(simbolo):
@@ -61,23 +59,19 @@ def calcular_indicadores(simbolo):
         close = datos["Close"].squeeze()
         precio = round(float(close.iloc[-1]), 5)
 
-        # RSI
         delta = close.diff()
         g = delta.where(delta > 0, 0).rolling(14).mean()
         p = (-delta.where(delta < 0, 0)).rolling(14).mean()
         rsi = round(float(100 - (100 / (1 + g.iloc[-1] / p.iloc[-1]))), 1)
 
-        # EMAs
         ema20 = round(float(close.ewm(span=20).mean().iloc[-1]), 5)
         ema50 = round(float(close.ewm(span=50).mean().iloc[-1]), 5)
 
-        # Bollinger Bands
         sma20 = close.rolling(20).mean()
         std20 = close.rolling(20).std()
         bb_upper = round(float((sma20 + 2*std20).iloc[-1]), 5)
         bb_lower = round(float((sma20 - 2*std20).iloc[-1]), 5)
 
-        # SEÑAL
         score = 0
         razones = []
 
@@ -87,11 +81,11 @@ def calcular_indicadores(simbolo):
             score -= 1; razones.append("❌ Precio bajo EMA20 y EMA50")
 
         if rsi < 35:
-            score += 1; razones.append(f"✅ RSI={rsi} sobrevendido → posible rebote")
+            score += 1; razones.append("✅ RSI=" + str(rsi) + " sobrevendido")
         elif rsi > 65:
-            score -= 1; razones.append(f"❌ RSI={rsi} sobrecomprado → posible caída")
+            score -= 1; razones.append("❌ RSI=" + str(rsi) + " sobrecomprado")
         else:
-            razones.append(f"⚠️ RSI={rsi} zona neutral")
+            razones.append("⚠️ RSI=" + str(rsi) + " zona neutral")
 
         if precio <= bb_lower:
             score += 1; razones.append("✅ Precio en banda inferior Bollinger")
@@ -117,38 +111,22 @@ def calcular_indicadores(simbolo):
 
 
 def calcular_setup(par, ind):
-    sr = SOPORTES_RESISTENCIAS.get(par, {})
-    soportes = sr.get("s", [])
-    resistencias = sr.get("r", [])
     p = ind["precio"]
-
     if "LARGO" in ind["sesgo"]:
         sl_pips = round(p * 0.002, 5)
         tp_pips = round(p * 0.004, 5)
-        return {
-            "direccion": "🟢 LARGO",
-            "entrada": p,
-            "sl": round(p - sl_pips, 5),
-            "tp": round(p + tp_pips, 5),
-            "tf": "1H o 4H",
-        }
+        return {"direccion": "🟢 LARGO", "entrada": p, "sl": round(p - sl_pips, 5), "tp": round(p + tp_pips, 5), "tf": "1H o 4H"}
     elif "CORTO" in ind["sesgo"]:
         sl_pips = round(p * 0.002, 5)
         tp_pips = round(p * 0.004, 5)
-        return {
-            "direccion": "🔴 CORTO",
-            "entrada": p,
-            "sl": round(p + sl_pips, 5),
-            "tp": round(p - tp_pips, 5),
-            "tf": "1H o 4H",
-        }
+        return {"direccion": "🔴 CORTO", "entrada": p, "sl": round(p + sl_pips, 5), "tp": round(p - tp_pips, 5), "tf": "1H o 4H"}
     return None
 
 
 def evento_hoy():
     hoy = datetime.now()
     dias = {0:"Lunes", 1:"Martes", 2:"Miércoles", 3:"Jueves", 4:"Viernes"}
-    dia_str = f"{dias.get(hoy.weekday(),'')} {hoy.day}"
+    dia_str = dias.get(hoy.weekday(), "") + " " + str(hoy.day)
     return [e for e in EVENTOS_SEMANA if dia_str.lower() in e["dia"].lower()]
 
 
@@ -176,15 +154,15 @@ def obtener_noticias():
             items = re.findall(r"<item>(.*?)</item>", contenido, re.DOTALL)
             for item in items[:4]:
                 titulo_m = re.search(r"<title><!\[CDATA\[(.*?)\]\]></title>|<title>(.*?)</title>", item)
-                link_m   = re.search(r"<link>(.*?)</link>|<guid[^>]*>(https?://.*?)</guid>", item)
+                link_m = re.search(r"<link>(.*?)</link>|<guid[^>]*>(https?://.*?)</guid>", item)
                 if titulo_m:
                     titulo = (titulo_m.group(1) or titulo_m.group(2) or "").strip()
-                    link   = (link_m.group(1) or link_m.group(2) or "").strip() if link_m else ""
+                    link = (link_m.group(1) or link_m.group(2) or "").strip() if link_m else ""
                     if titulo and len(titulo) > 15:
                         noticias.append({"titulo": titulo, "link": link, "fuente": fuente})
             if len(noticias) >= 5:
                 break
-    except:
+    except Exception:
         pass
     if not noticias:
         noticias = [
@@ -195,13 +173,22 @@ def obtener_noticias():
     return noticias
 
 
+def _noticia_html(n):
+    if n.get("link"):
+        return (
+            "<p style='margin:6px 0;font-size:13px;'>• "
+            "<a href='" + n["link"] + "' style='color:#7ecfff;text-decoration:none;' target='_blank'>" + n["titulo"] + "</a>"
+            " <span style='color:#555;font-size:11px;'>(" + n["fuente"] + ")</span></p>"
+        )
+    return "<p style='margin:6px 0;font-size:13px;color:#ccc;'>• " + n["titulo"] + "</p>"
+
+
 def construir_html(resultados):
     ahora = datetime.now().strftime("%A %d de %B, %Y — %H:%M hrs")
     alerta_txt, alerta_color = nivel_alerta()
     hoy_eventos = evento_hoy()
     noticias = obtener_noticias()
 
-    # Tabla de pares
     filas_pares = ""
     filas_setup = ""
     for par, ind in resultados.items():
@@ -209,142 +196,115 @@ def construir_html(resultados):
             continue
         sr = SOPORTES_RESISTENCIAS.get(par, {})
         razones_html = "<br>".join(ind["razones"])
-        filas_pares += f"""
-        <tr>
-          <td style="font-weight:bold;padding:8px;border-bottom:1px solid #333;">{par}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;color:#fff;">{ind['precio']}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;color:#aaa;font-size:11px;">RSI: {ind['rsi']}<br>EMA20: {ind['ema20']}<br>EMA50: {ind['ema50']}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;color:#00cc88;font-size:11px;">{" | ".join(sr.get('s',[]))}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;color:#ff6666;font-size:11px;">{" | ".join(sr.get('r',[]))}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;font-size:11px;color:#ccc;">{razones_html}</td>
-          <td style="padding:8px;border-bottom:1px solid #333;font-weight:bold;color:{ind['color']};">{ind['sesgo']}</td>
-        </tr>"""
-
+        filas_pares += (
+            "<tr>"
+            "<td style='font-weight:bold;padding:8px;border-bottom:1px solid #333;'>" + par + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;color:#fff;'>" + str(ind["precio"]) + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;color:#aaa;font-size:11px;'>RSI: " + str(ind["rsi"]) + "<br>EMA20: " + str(ind["ema20"]) + "<br>EMA50: " + str(ind["ema50"]) + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;color:#00cc88;font-size:11px;'>" + " | ".join(sr.get("s", [])) + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;color:#ff6666;font-size:11px;'>" + " | ".join(sr.get("r", [])) + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;font-size:11px;color:#ccc;'>" + razones_html + "</td>"
+            "<td style='padding:8px;border-bottom:1px solid #333;font-weight:bold;color:" + ind["color"] + ";'>" + ind["sesgo"] + "</td>"
+            "</tr>"
+        )
         setup = calcular_setup(par, ind)
         if setup:
-            filas_setup += f"""
-            <tr>
-              <td style="font-weight:bold;padding:8px;border-bottom:1px solid #333;">{par}</td>
-              <td style="padding:8px;border-bottom:1px solid #333;font-weight:bold;color:{ind['color']};">{setup['direccion']}</td>
-              <td style="padding:8px;border-bottom:1px solid #333;color:#fff;">{setup['entrada']}</td>
-              <td style="padding:8px;border-bottom:1px solid #333;color:#ff6666;">{setup['sl']}</td>
-              <td style="padding:8px;border-bottom:1px solid #333;color:#00cc88;">{setup['tp']}</td>
-              <td style="padding:8px;border-bottom:1px solid #333;color:#aaa;">{setup['tf']}</td>
-            </tr>"""
+            filas_setup += (
+                "<tr>"
+                "<td style='font-weight:bold;padding:8px;border-bottom:1px solid #333;'>" + par + "</td>"
+                "<td style='padding:8px;border-bottom:1px solid #333;font-weight:bold;color:" + ind["color"] + ";'>" + setup["direccion"] + "</td>"
+                "<td style='padding:8px;border-bottom:1px solid #333;color:#fff;'>" + str(setup["entrada"]) + "</td>"
+                "<td style='padding:8px;border-bottom:1px solid #333;color:#ff6666;'>" + str(setup["sl"]) + "</td>"
+                "<td style='padding:8px;border-bottom:1px solid #333;color:#00cc88;'>" + str(setup["tp"]) + "</td>"
+                "<td style='padding:8px;border-bottom:1px solid #333;color:#aaa;'>" + setup["tf"] + "</td>"
+                "</tr>"
+            )
 
-    # Eventos hoy
     if hoy_eventos:
-        filas_hoy = "".join(f"""
-        <tr><td style="padding:6px;border-bottom:1px solid #333;">{e['hora']}</td>
-        <td style="padding:6px;border-bottom:1px solid #333;font-weight:bold;">{e['evento']}</td>
-        <td style="padding:6px;border-bottom:1px solid #333;">{e['impacto']}</td>
-        <td style="padding:6px;border-bottom:1px solid #333;">{e['par']}</td></tr>"""
-        for e in hoy_eventos)
-        tabla_hoy = f'<table width="100%" style="border-collapse:collapse;font-size:13px;"><tr style="background:#1a1a2e;color:#aaa;"><th style="padding:6px;text-align:left;">Hora</th><th style="padding:6px;text-align:left;">Evento</th><th style="padding:6px;text-align:left;">Impacto</th><th style="padding:6px;text-align:left;">Par</th></tr>{filas_hoy}</table>'
+        filas_hoy = "".join(
+            "<tr><td style='padding:6px;border-bottom:1px solid #333;'>" + e["hora"] + "</td>"
+            "<td style='padding:6px;border-bottom:1px solid #333;font-weight:bold;'>" + e["evento"] + "</td>"
+            "<td style='padding:6px;border-bottom:1px solid #333;'>" + e["impacto"] + "</td>"
+            "<td style='padding:6px;border-bottom:1px solid #333;'>" + e["par"] + "</td></tr>"
+            for e in hoy_eventos
+        )
+        tabla_hoy = "<table width='100%' style='border-collapse:collapse;font-size:13px;'><tr style='background:#1a1a2e;color:#aaa;'><th style='padding:6px;text-align:left;'>Hora</th><th style='padding:6px;text-align:left;'>Evento</th><th style='padding:6px;text-align:left;'>Impacto</th><th style='padding:6px;text-align:left;'>Par</th></tr>" + filas_hoy + "</table>"
     else:
         tabla_hoy = "<p style='color:#aaa;'>Sin eventos de alto impacto hoy ✅</p>"
 
-    noticias_html = "".join(
-        f"<p style='margin:6px 0;font-size:13px;'>"
-        f"• <a href='{n[\"link\"]}' style='color:#7ecfff;text-decoration:none;' target='_blank'>{n['titulo']}</a>"
-        f" <span style='color:#555;font-size:11px;'>({n['fuente']})</span></p>"
-        if n.get("link") else
-        f"<p style='margin:6px 0;font-size:13px;color:#ccc;'>• {n['titulo']}</p>"
-        for n in noticias
+    noticias_html = "".join(_noticia_html(n) for n in noticias)
+
+    filas_semana = "".join(
+        "<tr style='background:" + ("#2a0000" if "MÁXIMO" in e["impacto"] else "#1a1a1a") + ";'>"
+        "<td style='padding:6px;border-bottom:1px solid #2a2a2a;'>" + e["dia"] + "</td>"
+        "<td style='padding:6px;border-bottom:1px solid #2a2a2a;'>" + e["hora"] + "</td>"
+        "<td style='padding:6px;border-bottom:1px solid #2a2a2a;font-weight:bold;'>" + e["evento"] + "</td>"
+        "<td style='padding:6px;border-bottom:1px solid #2a2a2a;'>" + e["impacto"] + "</td>"
+        "</tr>"
+        for e in EVENTOS_SEMANA
     )
 
-    filas_semana = "".join(f"""
-    <tr style="background:{'#2a0000' if 'MÁXIMO' in e['impacto'] else '#1a1a1a'};">
-      <td style="padding:6px;border-bottom:1px solid #2a2a2a;">{e['dia']}</td>
-      <td style="padding:6px;border-bottom:1px solid #2a2a2a;">{e['hora']}</td>
-      <td style="padding:6px;border-bottom:1px solid #2a2a2a;font-weight:bold;">{e['evento']}</td>
-      <td style="padding:6px;border-bottom:1px solid #2a2a2a;">{e['impacto']}</td>
-    </tr>""" for e in EVENTOS_SEMANA)
+    sin_setups = "<tr><td colspan='6' style='padding:12px;color:#aaa;text-align:center;'>⚠️ Sin setups claros hoy — esperar mejores condiciones</td></tr>"
 
-    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;color:#e0e0e0;">
-<table width="100%" style="max-width:720px;margin:0 auto;background:#111;border-radius:10px;overflow:hidden;">
-
-<tr><td style="background:linear-gradient(135deg,#0f3460,#16213e);padding:24px 28px;">
-  <h1 style="margin:0;font-size:22px;color:#00d4ff;">📊 FOREX DASHBOARD — DATOS EN VIVO</h1>
-  <p style="margin:6px 0 0;color:#7ecfff;font-size:13px;">{ahora} — Santiago, Chile</p>
-</td></tr>
-
-<tr><td style="padding:16px 28px;background:{alerta_color}22;border-left:4px solid {alerta_color};">
-  <p style="margin:0;font-size:14px;font-weight:bold;color:{alerta_color};">{alerta_txt}</p>
-</td></tr>
-
-<tr><td style="padding:20px 28px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;">🌍 CONTEXTO MACRO</h2>
-  <div style="font-size:13px;line-height:1.8;color:#ccc;white-space:pre-line;">{CONTEXTO_MACRO}</div>
-</td></tr>
-
-<tr><td style="padding:0 28px 20px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;">📰 NOTICIAS FOREX</h2>
-  {noticias_html}
-</td></tr>
-
-<tr><td style="padding:0 28px 20px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#ffcc00;border-bottom:1px solid #222;padding-bottom:6px;">⚡ EVENTOS HOY</h2>
-  {tabla_hoy}
-</td></tr>
-
-<tr><td style="padding:0 28px 20px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;">📈 ANÁLISIS TÉCNICO EN VIVO</h2>
-  <table width="100%" style="border-collapse:collapse;font-size:12px;">
-    <tr style="background:#1a1a2e;color:#aaa;">
-      <th style="padding:8px;text-align:left;">Par</th>
-      <th style="padding:8px;text-align:left;">Precio</th>
-      <th style="padding:8px;text-align:left;">Indicadores</th>
-      <th style="padding:8px;text-align:left;">🟢 Soporte</th>
-      <th style="padding:8px;text-align:left;">🔴 Resistencia</th>
-      <th style="padding:8px;text-align:left;">Señales</th>
-      <th style="padding:8px;text-align:left;">Sesgo</th>
-    </tr>
-    {filas_pares}
-  </table>
-</td></tr>
-
-<tr><td style="padding:0 28px 20px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#00ff88;border-bottom:1px solid #222;padding-bottom:6px;">🎯 SETUPS DE TRADING HOY</h2>
-  <table width="100%" style="border-collapse:collapse;font-size:13px;">
-    <tr style="background:#1a1a2e;color:#aaa;">
-      <th style="padding:8px;text-align:left;">Par</th>
-      <th style="padding:8px;text-align:left;">Dirección</th>
-      <th style="padding:8px;text-align:left;">Entrada</th>
-      <th style="padding:8px;text-align:left;">Stop Loss</th>
-      <th style="padding:8px;text-align:left;">Take Profit</th>
-      <th style="padding:8px;text-align:left;">Timeframe</th>
-    </tr>
-    {filas_setup if filas_setup else '<tr><td colspan="6" style="padding:12px;color:#aaa;text-align:center;">⚠️ Sin setups claros hoy — esperar mejores condiciones</td></tr>'}
-  </table>
-</td></tr>
-
-<tr><td style="padding:0 28px 20px;">
-  <h2 style="margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;">📅 CALENDARIO SEMANAL</h2>
-  <table width="100%" style="border-collapse:collapse;font-size:12px;">
-    <tr style="background:#1a1a2e;color:#aaa;">
-      <th style="padding:6px;text-align:left;">Día</th>
-      <th style="padding:6px;text-align:left;">Hora</th>
-      <th style="padding:6px;text-align:left;">Evento</th>
-      <th style="padding:6px;text-align:left;">Impacto</th>
-    </tr>
-    {filas_semana}
-  </table>
-</td></tr>
-
-<tr><td style="padding:16px 28px;background:#0f3460;border-top:1px solid #1a3a6e;">
-  <p style="margin:0;font-size:13px;color:#aaccff;line-height:1.6;">
-    💬 <strong style="color:#fff;">¿Qué hacer?</strong> Abre Claude en tu celular y escribe:<br>
-    <strong style="color:#00d4ff;">"Claude, llegó mi dashboard. Dame el análisis y setup de hoy."</strong>
-  </p>
-</td></tr>
-
-<tr><td style="padding:12px 28px;background:#0a0a0a;text-align:center;">
-  <p style="margin:0;font-size:11px;color:#444;">Forex Dashboard — Felipe Mejía • Datos: Yahoo Finance • No es asesoría financiera</p>
-</td></tr>
-
-</table></body></html>"""
+    return (
+        "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>"
+        "<body style='margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;color:#e0e0e0;'>"
+        "<table width='100%' style='max-width:720px;margin:0 auto;background:#111;border-radius:10px;overflow:hidden;'>"
+        "<tr><td style='background:linear-gradient(135deg,#0f3460,#16213e);padding:24px 28px;'>"
+        "<h1 style='margin:0;font-size:22px;color:#00d4ff;'>📊 FOREX DASHBOARD — DATOS EN VIVO</h1>"
+        "<p style='margin:6px 0 0;color:#7ecfff;font-size:13px;'>" + ahora + " — Santiago, Chile</p>"
+        "</td></tr>"
+        "<tr><td style='padding:16px 28px;background:" + alerta_color + "22;border-left:4px solid " + alerta_color + ";'>"
+        "<p style='margin:0;font-size:14px;font-weight:bold;color:" + alerta_color + ";'>" + alerta_txt + "</p>"
+        "</td></tr>"
+        "<tr><td style='padding:20px 28px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;'>🌍 CONTEXTO MACRO</h2>"
+        "<div style='font-size:13px;line-height:1.8;color:#ccc;white-space:pre-line;'>" + CONTEXTO_MACRO + "</div>"
+        "</td></tr>"
+        "<tr><td style='padding:0 28px 20px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;'>📰 NOTICIAS FOREX</h2>"
+        + noticias_html +
+        "</td></tr>"
+        "<tr><td style='padding:0 28px 20px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#ffcc00;border-bottom:1px solid #222;padding-bottom:6px;'>⚡ EVENTOS HOY</h2>"
+        + tabla_hoy +
+        "</td></tr>"
+        "<tr><td style='padding:0 28px 20px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;'>📈 ANÁLISIS TÉCNICO EN VIVO</h2>"
+        "<table width='100%' style='border-collapse:collapse;font-size:12px;'>"
+        "<tr style='background:#1a1a2e;color:#aaa;'>"
+        "<th style='padding:8px;text-align:left;'>Par</th><th style='padding:8px;text-align:left;'>Precio</th>"
+        "<th style='padding:8px;text-align:left;'>Indicadores</th><th style='padding:8px;text-align:left;'>🟢 Soporte</th>"
+        "<th style='padding:8px;text-align:left;'>🔴 Resistencia</th><th style='padding:8px;text-align:left;'>Señales</th>"
+        "<th style='padding:8px;text-align:left;'>Sesgo</th></tr>"
+        + filas_pares +
+        "</table></td></tr>"
+        "<tr><td style='padding:0 28px 20px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#00ff88;border-bottom:1px solid #222;padding-bottom:6px;'>🎯 SETUPS DE TRADING HOY</h2>"
+        "<table width='100%' style='border-collapse:collapse;font-size:13px;'>"
+        "<tr style='background:#1a1a2e;color:#aaa;'>"
+        "<th style='padding:8px;text-align:left;'>Par</th><th style='padding:8px;text-align:left;'>Dirección</th>"
+        "<th style='padding:8px;text-align:left;'>Entrada</th><th style='padding:8px;text-align:left;'>Stop Loss</th>"
+        "<th style='padding:8px;text-align:left;'>Take Profit</th><th style='padding:8px;text-align:left;'>Timeframe</th></tr>"
+        + (filas_setup if filas_setup else sin_setups) +
+        "</table></td></tr>"
+        "<tr><td style='padding:0 28px 20px;'>"
+        "<h2 style='margin:0 0 10px;font-size:15px;color:#00d4ff;border-bottom:1px solid #222;padding-bottom:6px;'>📅 CALENDARIO SEMANAL</h2>"
+        "<table width='100%' style='border-collapse:collapse;font-size:12px;'>"
+        "<tr style='background:#1a1a2e;color:#aaa;'>"
+        "<th style='padding:6px;text-align:left;'>Día</th><th style='padding:6px;text-align:left;'>Hora</th>"
+        "<th style='padding:6px;text-align:left;'>Evento</th><th style='padding:6px;text-align:left;'>Impacto</th></tr>"
+        + filas_semana +
+        "</table></td></tr>"
+        "<tr><td style='padding:16px 28px;background:#0f3460;border-top:1px solid #1a3a6e;'>"
+        "<p style='margin:0;font-size:13px;color:#aaccff;line-height:1.6;'>"
+        "💬 <strong style='color:#fff;'>¿Qué hacer?</strong> Abre Claude en tu celular y escribe:<br>"
+        "<strong style='color:#00d4ff;'>\"Claude, llegó mi dashboard. Dame el análisis y setup de hoy.\"</strong>"
+        "</p></td></tr>"
+        "<tr><td style='padding:12px 28px;background:#0a0a0a;text-align:center;'>"
+        "<p style='margin:0;font-size:11px;color:#444;'>Forex Dashboard — Felipe Mejía • Datos: Yahoo Finance • No es asesoría financiera</p>"
+        "</td></tr></table></body></html>"
+    )
 
 
 def enviar_correo():
@@ -356,14 +316,14 @@ def enviar_correo():
     resultados = {}
     for par, simbolo in PARES.items():
         resultados[par] = calcular_indicadores(simbolo)
-        print(f"  ✅ {par} obtenido")
+        print("  ✅ " + par + " obtenido")
 
     hoy = datetime.now()
-    asunto = f"📊 Forex Dashboard — {hoy.strftime('%A %d %b')} | Señales en vivo"
+    asunto = "📊 Forex Dashboard — " + hoy.strftime("%A %d %b") + " | Señales en vivo"
     msg = MIMEMultipart("alternative")
     msg["Subject"] = asunto
-    msg["From"]    = GMAIL_ADDRESS
-    msg["To"]      = DESTINATARIO
+    msg["From"] = GMAIL_ADDRESS
+    msg["To"] = DESTINATARIO
     msg.attach(MIMEText(construir_html(resultados), "html"))
 
     try:
@@ -371,15 +331,15 @@ def enviar_correo():
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as server:
             server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
             server.sendmail(GMAIL_ADDRESS, DESTINATARIO, msg.as_string())
-        print(f"✅ Correo enviado a {DESTINATARIO}")
+        print("✅ Correo enviado a " + DESTINATARIO)
         return True
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print("❌ Error: " + str(e))
         return False
 
 
 if __name__ == "__main__":
     print("=" * 50)
-    print(f"  FOREX DASHBOARD — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    print("  FOREX DASHBOARD — " + datetime.now().strftime("%d/%m/%Y %H:%M"))
     print("=" * 50)
     enviar_correo()
