@@ -13,14 +13,14 @@ def evaluar_filtros(par, ind):
     filtros_largo = []
     filtros_corto = []
 
-    # ── FILTRO 1 — TENDENCIA (EMA20/50) ──
-    if ind["precio"] > ind["ema20"] > ind["ema50"]:
-        filtros_largo.append("✅ F1: Precio sobre EMA20 y EMA50 (tendencia alcista)")
-    elif ind["precio"] < ind["ema20"] < ind["ema50"]:
-        filtros_corto.append("✅ F1: Precio bajo EMA20 y EMA50 (tendencia bajista)")
+    # ── FILTRO 1 — TENDENCIA (EMA20/50 en 4H) ──
+    if ind["precio"] > ind["ema20_4h"] > ind["ema50_4h"]:
+        filtros_largo.append("✅ F1: Precio sobre EMA20 y EMA50 en 4H (tendencia alcista)")
+    elif ind["precio"] < ind["ema20_4h"] < ind["ema50_4h"]:
+        filtros_corto.append("✅ F1: Precio bajo EMA20 y EMA50 en 4H (tendencia bajista)")
     else:
-        filtros_largo.append("❌ F1: EMAs sin tendencia clara")
-        filtros_corto.append("❌ F1: EMAs sin tendencia clara")
+        filtros_largo.append("❌ F1: EMAs 4H sin tendencia clara")
+        filtros_corto.append("❌ F1: EMAs 4H sin tendencia clara")
 
     # ── FILTRO 2 — NIVEL TÉCNICO ──
     cerca_soporte = any(abs(precio - s) / s < 0.003 for s in sr["s"])

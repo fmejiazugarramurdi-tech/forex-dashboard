@@ -56,3 +56,8 @@ FUNDAMENTAL = {
 
 # Si DRY_RUN=1 (o true/yes), la alerta se imprime en el log y NO se envía correo.
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
+
+# Historial de velas 1H que se descarga (días) y mínimo de velas 4H cerradas
+# necesarias para que la EMA50 de 4H sea confiable.
+PERIODO_DESCARGA = "30d"
+MIN_BARRAS_4H = 60
