@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 
 from config import PERIODO_DESCARGA, MIN_BARRAS_4H
+from levels import calcular_niveles
 
 
 def es_horario_seguro():
@@ -19,32 +20,52 @@ def es_horario_seguro():
     return True
 
 
-def ema_4h(close):
-    """EMA20 y EMA50 sobre velas de 4H, armadas a partir de los cierres de 1H.
+def velas_4h(close, high=None, low=None):
+    """Velas 4H cerradas, armadas a partir de datos de 1H.
 
-    Usa solo velas 4H ya cerradas: si la última está en formación, se descarta,
-    para que la tendencia no cambie mientras esa vela todavía se mueve.
-    Retorna (ema20, ema50, n_barras) o None si no hay historial suficiente.
+    Si se pasan `high` y `low`, incluye máximos y mínimos (necesarios para niveles
+    y ATR). Si la última vela 4H está en formación, se descarta, para que nada
+    cambie mientras esa vela todavía se mueve. Retorna un DataFrame o None.
     """
-    c4 = close.resample("4h").last().dropna()
-    if len(c4) == 0:
+    df = pd.DataFrame({"close": close.resample("4h").last()})
+    if high is not None and low is not None:
+        df["high"] = high.resample("4h").max()
+        df["low"] = low.resample("4h").min()
+    df = df.dropna()
+    if df.empty:
         return None
     # La vela 4H está completa si ya llegó su última hora (inicio + 3h).
-    if close.index[-1] < c4.index[-1] + pd.Timedelta(hours=3):
-        c4 = c4.iloc[:-1]
-    if len(c4) < MIN_BARRAS_4H:
+    if close.index[-1] < df.index[-1] + pd.Timedelta(hours=3):
+        df = df.iloc[:-1]
+    return df if len(df) else None
+
+
+def ema_4h(close):
+    """EMA20 y EMA50 sobre velas de 4H cerradas.
+
+    Retorna (ema20, ema50, n_barras) o None si no hay historial suficiente.
+    """
+    c4 = velas_4h(close)
+    if c4 is None or len(c4) < MIN_BARRAS_4H:
         return None
-    ema20 = round(float(c4.ewm(span=20).mean().iloc[-1]), 5)
-    ema50 = round(float(c4.ewm(span=50).mean().iloc[-1]), 5)
+    ema20 = round(float(c4["close"].ewm(span=20).mean().iloc[-1]), 5)
+    ema50 = round(float(c4["close"].ewm(span=50).mean().iloc[-1]), 5)
     return ema20, ema50, len(c4)
 
 
-def indicadores_desde_serie(close):
-    """Calcula todos los indicadores a partir de una serie de cierres de 1H."""
+def indicadores_desde_serie(close, high=None, low=None):
+    """Calcula todos los indicadores a partir de series de 1H (cierre, máximo, mínimo).
+
+    Sin `high`/`low` no se pueden calcular niveles: el F2 quedará sin nivel claro.
+    """
     e4 = ema_4h(close)
     if e4 is None:
         return None
     ema20_4h, ema50_4h, barras_4h = e4
+
+    niveles, atr_4h = [], None
+    if high is not None and low is not None:
+        niveles, atr_4h = calcular_niveles(velas_4h(close, high, low))
 
     precio = round(float(close.iloc[-1]), 5)
 
@@ -79,6 +100,7 @@ def indicadores_desde_serie(close):
         "ema20_4h": ema20_4h, "ema50_4h": ema50_4h, "barras_4h": barras_4h,
         "bb_upper": bb_upper, "bb_lower": bb_lower,
         "divergencia": divergencia,
+        "niveles": niveles, "atr_4h": atr_4h,
     }
 
 
@@ -89,6 +111,8 @@ def calcular_indicadores(simbolo):
         if datos.empty or len(datos) < 50:
             return None
         close = datos["Close"].squeeze()
-        return indicadores_desde_serie(close)
+        high = datos["High"].squeeze()
+        low = datos["Low"].squeeze()
+        return indicadores_desde_serie(close, high, low)
     except Exception:
         return None

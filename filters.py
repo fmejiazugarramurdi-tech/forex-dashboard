@@ -1,11 +1,11 @@
 """Evaluación de filtros y cálculo del setup (entrada, SL, TP)."""
 
-from config import SOPORTES_RESISTENCIAS, FUNDAMENTAL
+from config import SOPORTES_RESISTENCIAS, FUNDAMENTAL, MIN_TOQUES
+from levels import nivel_cercano
 
 
 def evaluar_filtros(par, ind):
     """Evalúa los 5 filtros de la estrategia. Retorna score y detalles."""
-    sr = SOPORTES_RESISTENCIAS.get(par, {"s": [], "r": []})
     precio = ind["precio"]
     rsi = ind["rsi"]
     fund = FUNDAMENTAL.get(par, "neutro")
@@ -22,19 +22,21 @@ def evaluar_filtros(par, ind):
         filtros_largo.append("❌ F1: EMAs 4H sin tendencia clara")
         filtros_corto.append("❌ F1: EMAs 4H sin tendencia clara")
 
-    # ── FILTRO 2 — NIVEL TÉCNICO ──
-    cerca_soporte = any(abs(precio - s) / s < 0.003 for s in sr["s"])
-    cerca_resistencia = any(abs(precio - r) / r < 0.003 for r in sr["r"])
+    # ── FILTRO 2 — NIVEL TÉCNICO (zonas calculadas, con 2+ toques) ──
+    soporte = nivel_cercano(precio, ind.get("niveles"), ind.get("atr_4h"), "soporte")
+    resistencia = nivel_cercano(precio, ind.get("niveles"), ind.get("atr_4h"), "resistencia")
 
-    if cerca_soporte:
-        filtros_largo.append("✅ F2: Precio cerca de soporte clave")
+    if soporte:
+        filtros_largo.append("✅ F2: Precio cerca de soporte " + str(soporte["precio"])
+                             + " (" + str(soporte["toques"]) + " toques)")
         filtros_corto.append("❌ F2: Precio en soporte (no en resistencia)")
-    elif cerca_resistencia:
-        filtros_corto.append("✅ F2: Precio cerca de resistencia clave")
+    elif resistencia:
+        filtros_corto.append("✅ F2: Precio cerca de resistencia " + str(resistencia["precio"])
+                             + " (" + str(resistencia["toques"]) + " toques)")
         filtros_largo.append("❌ F2: Precio en resistencia (no en soporte)")
     else:
-        filtros_largo.append("❌ F2: Sin nivel técnico claro")
-        filtros_corto.append("❌ F2: Sin nivel técnico claro")
+        filtros_largo.append("❌ F2: Sin nivel técnico claro (" + str(MIN_TOQUES) + "+ toques)")
+        filtros_corto.append("❌ F2: Sin nivel técnico claro (" + str(MIN_TOQUES) + "+ toques)")
 
     # ── FILTRO 3 — RSI + DIVERGENCIAS ──
     if rsi < 30:

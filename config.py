@@ -25,6 +25,8 @@ PARES = {
 }
 
 
+# OJO: el filtro F2 ya NO usa estos niveles (los calcula desde los datos, ver levels.py).
+# Solo los usa calcular_setup() para el stop loss; se eliminan cuando el SL pase a ATR.
 SOPORTES_RESISTENCIAS = {
     "EUR/USD": {"s": [1.1500, 1.1450], "r": [1.1630, 1.1700]},
     "GBP/USD": {"s": [1.3390, 1.3300], "r": [1.3480, 1.3550]},
@@ -61,3 +63,11 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 # necesarias para que la EMA50 de 4H sea confiable.
 PERIODO_DESCARGA = "30d"
 MIN_BARRAS_4H = 60
+
+# ── Soportes y resistencias (F2) ──
+# Los valores de abajo son criterios razonables, no optimizados: se calibran en el backtest.
+ATR_PERIODO = 14        # velas 4H para el ATR
+PIVOTE_VENTANA = 2      # un pivote es el máximo/mínimo de 2 velas a cada lado
+MIN_TOQUES = 2          # tu estrategia: soporte/resistencia con 2+ toques
+TOL_AGRUPAR_ATR = 0.5   # pivotes a menos de 0.5 ATR de distancia forman una misma zona
+ZONA_CERCA_ATR = 0.5    # "cerca" del nivel = a no más de 0.5 ATR
